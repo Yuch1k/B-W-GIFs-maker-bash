@@ -1,0 +1,48 @@
+#!/bin/bash
+
+if [[ "$1" == "-h" || "$1" == "--help" || $# -ne 3 ]]; then
+	echo "Use: $0 [path name] [animation time] [file name].gif"
+	echo "-h, --help - show help"
+fi
+
+dir="$1"
+aTime="$2"
+oFile="$3"
+
+if [[ ! -d "$dir" ]]; then
+	echo "Error: patch not found"
+	exit 1
+fi
+
+if ! [[ "$aTime" =~ ^[0-9]+$ ]]; then
+	echo "Error: animation time < 0"
+	exit 1
+fi
+
+
+tempDir=$(mktemp -d)
+
+count=0
+for file in "$dir"/*.jpg; do
+	if [[ -f "$file" ]]; then
+		mType=$(file --mime-type -b "$file")
+		if [[ "$mType" == image/jpeg ]]; then
+			convert "$file" -colorspace Gray "$tempDir/$(basename "$file")"
+			printf "\rImages converted: "$count""
+			((count++))
+		fi
+	fi
+done
+
+if [[ $count -eq 0 ]]; then
+	echo "Error: Images not found"
+	rm -rf "$tempDir"
+	exit 1
+fi
+
+delay=$((aTime * 100 / count))
+convert -delay "$delay" -loop 0 "$tempDir"/*.jpg "$oFile"
+
+rm -rf "$tempDir"
+echo
+echo "GIF created: $oFile"
